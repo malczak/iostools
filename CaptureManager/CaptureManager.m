@@ -215,7 +215,9 @@
                 [self setActiveDevice:videoDevice];
 
         } else {
+#ifdef DEBUG
             NSLog(@"error on getting video device");
+#endif
         }
     }
 }
@@ -284,11 +286,15 @@
                 
                 
             } else {
+#ifdef DEBUG
                 NSLog(@"error on addInput");
+#endif
             }
             
         } else {
+#ifdef DEBUG
             NSLog(@"error on create deviceInput");
+#endif
         }
         
  
