@@ -22,14 +22,14 @@ NSString *const IAPHelperProductPurchaseErrorNotification = @"IAPHelperProductPu
     SKProductsRequest * _productsRequest;
     RequestProductsCompletionHandler _completionHandler;
     
-    NSSet * _productIdentifiers;
+    NSArray * _productIdentifiers;
     NSMutableSet * _purchasedProductIdentifiers;
     NSArray * _availableProducts;
 }
 
 @synthesize productsListIsValid = _productsListIsValid;
 
-- (id)initWithProductIdentifiers:(NSSet *)productIdentifiers {
+- (id)initWithProductIdentifiers:(NSArray *)productIdentifiers {
     
     if ((self = [super init])) {
         
@@ -91,7 +91,7 @@ NSString *const IAPHelperProductPurchaseErrorNotification = @"IAPHelperProductPu
     _completionHandler = [completionHandler copy];
     
     // 2
-    _productsRequest = [[SKProductsRequest alloc] initWithProductIdentifiers:_productIdentifiers];
+    _productsRequest = [[SKProductsRequest alloc] initWithProductIdentifiers:[NSSet setWithArray:_productIdentifiers]];
     _productsRequest.delegate = self;
     [_productsRequest start];
     
@@ -152,11 +152,29 @@ NSString *const IAPHelperProductPurchaseErrorNotification = @"IAPHelperProductPu
     _productsRequest = nil;
     _productsListIsValid = YES;
     
-    _availableProducts = skProducts;
+    // sort to preserve order :D
+    NSArray *sortedProducts =(nil!=skProducts)?
+    [skProducts sortedArrayUsingComparator:^NSComparisonResult(id obj1, id obj2) {
+        SKProduct *product1 = (SKProduct*)obj1;
+        SKProduct *product2 = (SKProduct*)obj2;
+        int index1 = [_productIdentifiers indexOfObject:product1.productIdentifier];
+        if(index1==NSNotFound) {
+            return NSOrderedSame;
+        }
+        int index2 = [_productIdentifiers indexOfObject:product2.productIdentifier];
+        if(index2==NSNotFound) {
+            return NSOrderedSame;
+        }
+        if(index1<index2) {
+            return NSOrderedAscending;
+        }
+        return NSOrderedDescending;
+    }]:nil;
     
-    _completionHandler(YES, skProducts);
+    _availableProducts = sortedProducts;
+    
+    _completionHandler(YES, _availableProducts);
     _completionHandler = nil;
-    
 }
 
 - (void)request:(SKRequest *)request didFailWithError:(NSError *)error {
