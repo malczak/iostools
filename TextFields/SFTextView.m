@@ -83,6 +83,7 @@ static const float TEXTVIEW_PADDING = 8;
     textView.scrollEnabled = YES;
     textView.editable = YES;
     textView.hidden = NO;
+    textView.userInteractionEnabled = NO;
     textView.textAlignment = NSTextAlignmentCenter;
     textView.transform = CGAffineTransformIdentity;
     textView.backgroundColor = [UIColor clearColor];
@@ -99,23 +100,28 @@ static const float TEXTVIEW_PADDING = 8;
     [self setText:@""];
 }
 
--(BOOL)becomeFirstResponder
-{
+-(BOOL)becomeFirstResponder {
+    textView.userInteractionEnabled = YES;
+    textView.editable = YES;
     return [textView becomeFirstResponder];
 }
 
--(BOOL)resignFirstResponder
-{
+-(BOOL)resignFirstResponder {
+    textView.userInteractionEnabled = NO;
+    textView.editable = NO;
     return [textView resignFirstResponder];
 }
 
--(BOOL)canBecomeFirstResponder
-{
+-(BOOL)canBecomeFirstResponder {
     return [textView canBecomeFirstResponder];
 }
 
 -(BOOL)canResignFirstResponder {
     return [textView canResignFirstResponder];
+}
+
+-(BOOL)isFirstResponder {
+    return [textView isFirstResponder];
 }
 
 #pragma mark Text size calculation
@@ -176,7 +182,8 @@ static const float TEXTVIEW_PADDING = 8;
 
 -(void) setCalculatedFrameSize
 {
-    CGSize finalSize = CGSizeMake(calculatedTextSize.width, fminf(maxHeight - textView.scrollIndicatorInsets.top - textView.scrollIndicatorInsets.bottom,calculatedTextSize.height));
+    CGFloat finalHeight = (maxHeight>0) ? fminf(maxHeight - textView.scrollIndicatorInsets.top - textView.scrollIndicatorInsets.bottom,calculatedTextSize.height) : calculatedTextSize.height;
+    CGSize finalSize = CGSizeMake(calculatedTextSize.width, finalHeight);
     CGRect finalRect =  (CGRect){ {0,0}, finalSize };
     
     background.frame = finalRect;
@@ -258,9 +265,10 @@ static const float TEXTVIEW_PADDING = 8;
     [self calculateSizeFromString:self.text withFont:self.font];
 }
 
+/*
 -(UIView*) inputAccessoryView
 {
-    return textView.inputAccessoryView;
+    return (nil!=textView.inputAccessoryView)?textView.inputAccessoryView:nil;
 }
 
 -(void) setInputAccessoryView:(UIView*)view
@@ -268,6 +276,7 @@ static const float TEXTVIEW_PADDING = 8;
     textView.inputAccessoryView = view;
 }
 
+ */
 -(void)setMaxHeight:(CGFloat)value
 {
     maxHeight = value;
@@ -277,7 +286,7 @@ static const float TEXTVIEW_PADDING = 8;
 
 -(void)dealloc
 {
-    [self setInputAccessoryView:nil];
+//    [self setInputAccessoryView:nil];
 }
 
 @end

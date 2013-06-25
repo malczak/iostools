@@ -14,8 +14,8 @@
 
 @property (nonatomic, assign) CGFloat maxHeight;
 
--(UIView*) inputAccessoryView;
--(void) setInputAccessoryView:(UIView*)view;
+//-(UIView*) inputAccessoryView;
+//-(void) setInputAccessoryView:(UIView*)view;
 
 -(UIColor*) color;
 -(void) setColor:(UIColor*)color;
