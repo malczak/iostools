@@ -35,7 +35,7 @@ static const float TEXTVIEW_PADDING = 8;
  
  https://github.com/ole/Animated-Paths/blob/master/Classes/AnimatedPathViewController.m
  */
-static CGPathRef textToPath(NSString *string, UIFont *font, NSTextAlignment align, CGSize expectedSize, SFTextFieldLineSpacingType lineSpacingType, float lineSpacing)
+CGPathRef textToPath(NSString *string, UIFont *font, NSTextAlignment align, CGSize expectedSize, SFTextFieldLineSpacingType lineSpacingType, float lineSpacing)
 {
     CGMutablePathRef textPath = CGPathCreateMutable();
 

@@ -12,6 +12,8 @@
     
     BOOL isPresentingAd;
     
+    BOOL isLoadingAd;
+    
     // iAd
     ADBannerView *iAdBannerView;
     
@@ -24,9 +26,19 @@
 
 -(void) removeIAdBannerView;
 
+-(void) showIAdBannedView;
+
+-(void) hideIAdBannerView;
+
 -(void) createGAdBannerView;
 
 -(void) removeGAdBannerView;
+
+-(void) loadGAdBannerView;
+
+-(void) showGAdBannedView;
+
+-(void) hideGAdBannerView;
 
 @end
 
@@ -40,6 +52,8 @@
 
 -(void) createAdView{
     [self createIAdBannerView];
+    [self createGAdBannerView];
+    isLoadingAd = NO;
 }
 
 -(void) removeAdView{
@@ -55,21 +69,36 @@
     if(nil==delegate) {
         return;
     }
+
     iAdBannerView = [[ADBannerView alloc] initWithAdType:ADAdTypeBanner];
     iAdBannerView.hidden = YES;
     iAdBannerView.delegate = self;
     [[delegate adsGetRootView] addSubview:iAdBannerView];
-    isPresentingAd = true;
-}
+}   
 
 -(void)removeIAdBannerView
 {
-    if(nil!=iAdBannerView) {
-        iAdBannerView.delegate = nil;
-        [iAdBannerView removeFromSuperview];
-        iAdBannerView = nil;
+    [self hideIAdBannerView];
+    [iAdBannerView removeFromSuperview];
+    iAdBannerView.delegate = nil;
+    iAdBannerView = nil;
+}
+
+-(void) showIAdBannedView
+{
+    isPresentingAd = YES;
+    iAdBannerView.hidden = NO;
+    UIView *view = [delegate adsGetRootView];
+    if(view && ![view.subviews containsObject:iAdBannerView]) {
+        [view addSubview:iAdBannerView];
     }
-    isPresentingAd = false;
+}
+
+-(void) hideIAdBannerView
+{
+    isPresentingAd = NO;
+    iAdBannerView.hidden = YES;
+    [iAdBannerView removeFromSuperview];
 }
 
 - (void)bannerViewWillLoadAd:(ADBannerView *)banner {
@@ -83,10 +112,12 @@
 #ifdef DEBUG
     NSLog(@"bannerViewDidLoadAd:(ADBannerView *)banner");
 #endif
-    
-    isPresentingAd = YES;
-    iAdBannerView.hidden = NO;
-    [self.delegate adsPositionAdView:iAdBannerView ForProvider:iAd];
+    if(!isPresentingAd) {
+        [self hideGAdBannerView];
+        [self showIAdBannedView];
+        
+        [self.delegate adsPositionAdView:iAdBannerView ForProvider:iAd];
+    }
 }
 
 - (void)bannerView:(ADBannerView *)banner didFailToReceiveAdWithError:(NSError *)error {
@@ -94,11 +125,9 @@
 #ifdef DEBUG
     NSLog(@"bannerView:(ADBannerView *)banner didFailToReceiveAdWithError:(NSError *)error %@",[error description]);
 #endif
-    
-    [self removeIAdBannerView];
-    
+    [self hideIAdBannerView];
     // try gad
-    [self createGAdBannerView];
+    [self loadGAdBannerView];
 }
 
 - (BOOL)bannerViewActionShouldBegin:(ADBannerView *)banner willLeaveApplication:(BOOL)willLeave {
@@ -120,14 +149,20 @@
     if(nil==delegate) {
         return;
     }
-    
+
     gAdBannerView = [[GADBannerView alloc] initWithAdSize:kGADAdSizeBanner];
     gAdBannerView.adUnitID = [self.delegate adsGetIdForProvider:AdMob];
     gAdBannerView.rootViewController = [self.delegate adsGetRootController];
-    gAdBannerView.delegate = self;
     gAdBannerView.hidden = YES;
+    gAdBannerView.delegate = self;
+    [[delegate adsGetRootView] addSubview:gAdBannerView];
+}
 
-    
+-(void) loadGAdBannerView
+{
+    if(isLoadingAd) {
+        return;
+    }
     GADRequest *request = [GADRequest request];
     
 #ifdef DEBUG
@@ -136,21 +171,34 @@
         request.testDevices = testDevices;
     }
 #endif
-    
+
     [gAdBannerView loadRequest:request];
-    
-    [[delegate adsGetRootView] addSubview:gAdBannerView];
-    isPresentingAd = true;
+    gAdBannerView.hidden = YES;
+    isLoadingAd = YES;
+}
+
+-(void) showGAdBannedView
+{
+    isPresentingAd = YES;
+    gAdBannerView.hidden = NO;
+    UIView *view = [delegate adsGetRootView];
+    if(view && ![view.subviews containsObject:gAdBannerView]) {
+        [view addSubview:gAdBannerView];
+    }
+}
+
+-(void) hideGAdBannerView
+{
+    isPresentingAd = NO;
+    gAdBannerView.hidden = YES;
+    [gAdBannerView removeFromSuperview];
 }
 
 -(void)removeGAdBannerView {
-    if(nil!=gAdBannerView) {
-        gAdBannerView.rootViewController = nil;
-        gAdBannerView.delegate = nil;
-        [gAdBannerView removeFromSuperview];
-        gAdBannerView = nil;
-    }
-    isPresentingAd = false;
+    [self hideGAdBannerView];
+    gAdBannerView.rootViewController = nil;
+    gAdBannerView.delegate = nil;
+    gAdBannerView = nil;
 }
 
 - (void)adViewDidReceiveAd:(GADBannerView *)view {
@@ -158,11 +206,13 @@
 #ifdef DEBUG
     NSLog(@"adViewDidReceiveAd:(GADBannerView *)view");
 #endif
-    
-    isPresentingAd = YES;
-    
-    gAdBannerView.hidden = NO;
-    [self.delegate adsPositionAdView:gAdBannerView ForProvider:AdMob];
+    isLoadingAd = NO;
+    if(!isPresentingAd) {
+        [self hideIAdBannerView];
+        [self showGAdBannedView];
+        
+        [self.delegate adsPositionAdView:gAdBannerView ForProvider:AdMob];
+    }
 }
 
 - (void)adView:(GADBannerView *)view didFailToReceiveAdWithError:(GADRequestError *)error {
@@ -170,11 +220,8 @@
 #ifdef DEBUG
     NSLog(@"adView:(GADBannerView *)view didFailToReceiveAdWithError:(GADRequestError *)error %@",[error description]);
 #endif
-    
-    [self removeGAdBannerView];
-    
-    //try iAd once again
-    [self createIAdBannerView];
+    isLoadingAd = NO;
+    [self hideGAdBannerView];
 }
 
 - (void)adViewWillPresentScreen:(GADBannerView *)adView {
@@ -206,6 +253,12 @@
 -(void)dealloc
 {
     delegate = nil;
+    
+    [self hideIAdBannerView];
+    [self hideGAdBannerView];
+    
+    [self removeIAdBannerView];
+    [self removeGAdBannerView];
 }
 
 @end

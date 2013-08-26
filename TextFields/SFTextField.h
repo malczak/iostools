@@ -15,6 +15,8 @@ typedef enum{
     SFTextFieldLineExplicitSpacing,
 } SFTextFieldLineSpacingType;
 
+CGPathRef textToPath(NSString *string, UIFont *font, NSTextAlignment align, CGSize expectedSize, SFTextFieldLineSpacingType lineSpacingType, float lineSpacing);
+
 @class SFTextField;
 
 @protocol SFTextFieldDelegate

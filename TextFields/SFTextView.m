@@ -9,8 +9,6 @@
 #import <QuartzCore/QuartzCore.h>
 #import "SFTextView.h"
 
-static const float TEXT_SIZE = 22;
-
 static const float TEXT_SIZE_MIN = 6;
 
 static const float TEXT_SIZE_MAX = 30;
@@ -35,7 +33,8 @@ static const float TEXTVIEW_PADDING = 8;
 
 @implementation SFTextView
 
-@synthesize maxHeight;
+@synthesize maxHeight, maxWidth, maxFontSize, minFontSize, placeholder;
+@synthesize autocapitalizationType;
 
 -(id)init
 {
@@ -66,38 +65,48 @@ static const float TEXTVIEW_PADDING = 8;
 -(void)createChildren
 {
 //    self.backgroundColor = [UIColor clearColor];
+
+    self.placeholder = @"ENTER TEXT";
+    self.maxWidth = MAX_TEXT_WIDTH;
+    self.maxFontSize = TEXT_SIZE_MAX;
+    self.minFontSize = TEXT_SIZE_MIN;
+    
+    if(!textView) {
+        textView = [[UITextView alloc] init];
+        [self addSubview:textView];
+        
+        textView.layer.shouldRasterize = NO;
+        textView.layer.shadowColor = [[UIColor blackColor] CGColor];
+        textView.layer.shadowOffset = CGSizeMake(0,0);
+        textView.layer.shadowOpacity = 1;
+        textView.layer.shadowRadius = 2;
+        
+        textView.textColor = [UIColor whiteColor];
+        textView.autocapitalizationType = UITextAutocapitalizationTypeNone;
+        textView.autocorrectionType = UITextAutocorrectionTypeNo;
+        textView.delegate = self;
+        textView.clipsToBounds = YES;
+        textView.scrollEnabled = YES;
+        textView.editable = YES;
+        textView.hidden = NO;
+        textView.userInteractionEnabled = NO;
+        textView.textAlignment = NSTextAlignmentCenter;
+        textView.transform = CGAffineTransformIdentity;
+        textView.backgroundColor = [UIColor clearColor];
+    }
+
+    if(!background) {
+        background = [[UIView alloc] init];
+        [self insertSubview:background atIndex:0];
+        background.userInteractionEnabled = NO;
+        background.layer.cornerRadius = 4;
+        background.backgroundColor = [UIColor blackColor];
+        background.alpha = 0.4;
+        background.hidden = YES;
+    }
     
     hasText = NO;
-    
-    textView = [[UITextView alloc] init];
-    [self addSubview:textView];
-    textView.layer.shadowColor = [[UIColor blackColor] CGColor];
-    textView.layer.shadowOffset = CGSizeMake(0,0);
-    textView.layer.shadowOpacity = 1;
-    textView.layer.shadowRadius = 4;
-    textView.textColor = [UIColor whiteColor];
-    textView.autocapitalizationType = UITextAutocapitalizationTypeNone;
-    textView.autocorrectionType = UITextAutocorrectionTypeNo;
-    textView.delegate = self;
-    textView.clipsToBounds = YES;
-    textView.scrollEnabled = YES;
-    textView.editable = YES;
-    textView.hidden = NO;
-    textView.userInteractionEnabled = NO;
-    textView.textAlignment = NSTextAlignmentCenter;
-    textView.transform = CGAffineTransformIdentity;
-    textView.backgroundColor = [UIColor clearColor];
-    textView.layer.shouldRasterize = NO;
-    
-    background = [[UIView alloc] init];
-    [self insertSubview:background atIndex:0];
-    background.userInteractionEnabled = NO;
-    background.layer.cornerRadius = 4;
-//    background.backgroundColor = [UIColor blackColor];
-    background.alpha = 0.4;
-    background.hidden = YES;
-    
-    [self setText:@""];
+    [self setupState];
 }
 
 -(BOOL)becomeFirstResponder {
@@ -134,12 +143,12 @@ static const float TEXTVIEW_PADDING = 8;
     }
     
     const float TEXTVIEW_PAD2 = TEXTVIEW_PADDING * 2;
-    const float MAX_WIDTH = MAX_TEXT_WIDTH - TEXTVIEW_PAD2;
+    const float MAX_WIDTH = self.maxWidth - TEXTVIEW_PAD2;
     
     CGSize calculatedLabelSize;
     BOOL finished = NO;
     
-    float workingFontSize = TEXT_SIZE_MAX;
+    float workingFontSize = self.maxFontSize;
     UIFont* workingFont = [UIFont fontWithName:font.fontName size:workingFontSize];
     
     do{
@@ -152,7 +161,7 @@ static const float TEXTVIEW_PADDING = 8;
                                constrainedToSize:maximumLabelSize
                                    lineBreakMode:NSLineBreakByWordWrapping];
         
-        if( (calculatedLabelSize.width > MAX_WIDTH) && (workingFontSize>TEXT_SIZE_MIN) ) {
+        if( (calculatedLabelSize.width > MAX_WIDTH) && (workingFontSize>self.minFontSize) ) {
             workingFontSize -= 1;
             workingFont = [UIFont fontWithName:font.fontName size:workingFontSize];
             finished = NO;
@@ -192,12 +201,30 @@ static const float TEXTVIEW_PADDING = 8;
     self.bounds = finalRect;    
 }
 
+-(void) setupState
+{
+    if(![self isFirstResponder]) {
+        hasText = (textView.hasText)&&(![textView.text isEqualToString:self.placeholder]);
+        if(!hasText) {
+            textView.alpha = 0.6;
+            textView.text = placeholder;
+        } else {
+            textView.alpha = 1.0;
+        }
+    }
+    [self calculateSizeFromString:self.text withFont:self.font];
+}
+
 
 #pragma mark Begin/End editting
 
 -(void)textViewDidBeginEditing:(UITextView *)view
 {
     [self setNeedsDisplay];
+    if([self isEmpty]) {
+        textView.text = @"";
+        textView.alpha = 1.0;
+    }
     background.hidden = NO;
 }
 
@@ -206,6 +233,7 @@ static const float TEXTVIEW_PADDING = 8;
     background.hidden = YES;
     textView.editable = NO;
     hasText = textView.hasText;
+    [self setupState];
 }
 
 -(BOOL)textView:(UITextView *)view shouldChangeTextInRange:(NSRange)range replacementText:(NSString *)text
@@ -243,7 +271,7 @@ static const float TEXTVIEW_PADDING = 8;
     UIFont *fixedFont = [UIFont fontWithName:font.fontName size:textSize];
     
     textView.font = fixedFont;
-//    textView.scrollEnabled = NO;
+    [self setupState];
 }
 
 -(NSTextAlignment) textAlignment
@@ -254,6 +282,7 @@ static const float TEXTVIEW_PADDING = 8;
 -(void) setTextAlignment:(NSTextAlignment)value
 {
     textView.textAlignment = value;
+    [self setupState];
 }
 
 -(NSString*)text {
@@ -262,10 +291,9 @@ static const float TEXTVIEW_PADDING = 8;
 
 -(void) setText:(NSString*)value {
     textView.text = value;
-    [self calculateSizeFromString:self.text withFont:self.font];
+    [self setupState];
 }
 
-/*
 -(UIView*) inputAccessoryView
 {
     return (nil!=textView.inputAccessoryView)?textView.inputAccessoryView:nil;
@@ -276,16 +304,38 @@ static const float TEXTVIEW_PADDING = 8;
     textView.inputAccessoryView = view;
 }
 
- */
+-(BOOL) isEmpty {
+    return (NO==hasText);
+}
+
 -(void)setMaxHeight:(CGFloat)value
 {
     maxHeight = value;
     [self setCalculatedFrameSize];
 }
 
+#pragma mark UITextInputTraits properties
+-(UITextAutocapitalizationType)autocapitalizationType {
+    return textView.autocapitalizationType;
+}
+
+-(void)setAutocapitalizationType:(UITextAutocapitalizationType)value {
+    textView.autocapitalizationType = value;
+}
+
+/*
+@property(nonatomic) UITextAutocapitalizationType autocapitalizationType;
+@property(nonatomic) UITextAutocorrectionType autocorrectionType;
+@property(nonatomic) UITextSpellCheckingType spellCheckingType;
+@property(nonatomic) UIKeyboardType keyboardType;
+@property(nonatomic) UIKeyboardAppearance keyboardAppearance;
+@property(nonatomic) UIReturnKeyType returnKeyType;
+@property(nonatomic) BOOL enablesReturnKeyAutomatically;
+*/
 
 -(void)dealloc
 {
+    self.inputAccessoryView = nil;
 //    [self setInputAccessoryView:nil];
 }
 

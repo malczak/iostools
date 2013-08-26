@@ -115,7 +115,6 @@ NSString *const IAPHelperProductPurchaseErrorNotification = @"IAPHelperProductPu
 #endif
     SKPayment * payment = [SKPayment paymentWithProduct:product];
     [[SKPaymentQueue defaultQueue] addPayment:payment];
-    
 }
 
 - (SKProduct*)productByProductIdentifier:(NSString *)productIdentifier

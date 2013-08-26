@@ -82,6 +82,8 @@ static CGPathRef textToPath(NSString *string, UIFont *font, NSTextAlignment alig
         CFIndex runIdx = 0;
         CFIndex runCnt = CFArrayGetCount(glyphRuns);
         
+//        CFRelease(line);
+        
         while(runIdx<runCnt) {
             
             CTRunRef lineRun = CFArrayGetValueAtIndex(glyphRuns, runIdx);
@@ -100,6 +102,7 @@ static CGPathRef textToPath(NSString *string, UIFont *font, NSTextAlignment alig
                 CTRunGetPositions(lineRun, thisGlyphRange, &position);
                 
                 CGAffineTransform T = CGAffineTransformMakeScale(1, -1);
+                
                 CGPathRef letterPath = CTFontCreatePathForGlyph(ctFont, glyph, &T);
                 T = CGAffineTransformMakeTranslation(position.x + penOffset, position.y + lineDelta);
                 CGPathAddPath(textPath, &T, letterPath);
@@ -114,10 +117,10 @@ static CGPathRef textToPath(NSString *string, UIFont *font, NSTextAlignment alig
             
             
             runIdx += 1;
+            
         }
         
-        //        CFRelease(glyphRuns);
-        //        CFRelease(line);
+        CFRelease(line);
         
         if(lineSpacingType == SFTextLabelLineHeightSpacing) {
             lineDelta += lineHeight;
@@ -134,13 +137,18 @@ static CGPathRef textToPath(NSString *string, UIFont *font, NSTextAlignment alig
         start += usedChars;
     }
     
+    CFRelease(typesetter);
+    CFRelease(ctFont);
+    
     CGRect pathRect = CGPathGetBoundingBox(textPath);
     CGAffineTransform T = CGAffineTransformIdentity;
     //    T = CGAffineTransformScale(T, 1, -1);
     //    T = CGAffineTransformTranslate(T, 0, -pathRect.size.height);
     T = CGAffineTransformTranslate(T, -pathRect.origin.x, -pathRect.origin.y);
     CGPathRef output = CGPathCreateCopyByTransformingPath(textPath, &T);
+    
     CGPathRelease(textPath);
+    
     return output;
 }
 
@@ -159,6 +167,7 @@ static CGPathRef textToPath(NSString *string, UIFont *font, NSTextAlignment alig
     
     CALayer  *textLayer;
     CAShapeLayer *textContentLayer;
+    CAShapeLayer *textShadowMaskLayer;
     CAShapeLayer *textShadowLayer;
 }
 
@@ -229,6 +238,9 @@ static CGPathRef textToPath(NSString *string, UIFont *font, NSTextAlignment alig
     textContentLayer.opacity = 1;
     textContentLayer.shouldRasterize = false;
     [textLayer insertSublayer:textContentLayer atIndex:0];
+    
+    textShadowMaskLayer = [[CAShapeLayer alloc] init];
+//    [textLayer insertSublayer:textShadowMaskLayer atIndex:0];
     
     textShadowLayer = [[CAShapeLayer alloc] init];
     textShadowLayer.opacity = 0.6;
@@ -312,15 +324,36 @@ static CGPathRef textToPath(NSString *string, UIFont *font, NSTextAlignment alig
 
         textContentLayer.path = textPath;
         textContentLayer.fillColor = [textColor CGColor];
+
+/*
+        const float shadow_alpha = 45.0 * M_PI / 180.0;
+        CGPoint offset = CGPointMake( cosf(shadow_alpha), sinf(shadow_alpha) );
+        CGAffineTransform T = CGAffineTransformMakeTranslation(offset.x, offset.y);
+        textContentLayer.shadowPath = CGPathCreateCopyByTransformingPath(textPath, &T);
+        textContentLayer.shadowColor = [[UIColor blackColor] CGColor];
+        textContentLayer.shadowOpacity = 1;
+        textContentLayer.shadowRadius = 0;
+*/
         
+        CGMutablePathRef path = CGPathCreateMutable();
+        CGPathAddRect(path, NULL, newBounds);
+        CGPathAddPath(path, NULL, textPath);
+        textShadowMaskLayer.path = path;
+        [textShadowMaskLayer setFillRule:kCAFillRuleEvenOdd];
+        textShadowMaskLayer.fillColor = [[UIColor redColor] CGColor];
+        [textShadowMaskLayer setPosition:CGPointMake(-textShadowLayer.position.x, -textShadowLayer.position.y)];
+//        [textShadowMaskLayer setContentsRect: CGRectMake(0, 0, pathRect.size.width, pathRect.size.height)];
+
         textShadowLayer.path = textPath;
         textShadowLayer.fillColor = [shadowColor CGColor];
-        textShadowLayer.shadowColor = [shadowColor CGColor];
-        textShadowLayer.shadowOffset = CGSizeMake(0, 0);
-        textShadowLayer.shadowOpacity = 1;
-        textShadowLayer.shadowPath = textPath;
-        textShadowLayer.shadowRadius = 2;
+        textShadowLayer.mask = textShadowMaskLayer;
         
+//        textShadowLayer.shadowColor = [shadowColor CGColor];
+//        textShadowLayer.shadowOffset = CGSizeMake(0, 0);
+//        textShadowLayer.shadowOpacity = 1;
+//        textShadowLayer.shadowPath = textPath;
+//        textShadowLayer.shadowRadius = 2;
+
         textLayerIsDirty = NO;
     
     }
@@ -424,6 +457,18 @@ static CGPathRef textToPath(NSString *string, UIFont *font, NSTextAlignment alig
 {
     [self calculateSizeFromString:self.text withFont:self.font];
 }
+
+/*
+-(void)setAlpha:(CGFloat)alpha
+{
+    textLayer.opacity = alpha;
+}
+
+-(CGFloat)alpha
+{
+    return textLayer.opacity;
+}
+ */
 
 -(void)dealloc
 {
