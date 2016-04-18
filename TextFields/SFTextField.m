@@ -76,7 +76,7 @@ CGPathRef textToPath(NSString *string, UIFont *font, NSTextAlignment align, CGSi
         
         CGFloat calculatedLineHeight = 0;
         
-        CGFloat penOffset = CTLineGetPenOffsetForFlush(line, flush, expectedSize.width);
+        CGFloat penOffset = (CGFloat) CTLineGetPenOffsetForFlush(line, flush, expectedSize.width);
         
         CFArrayRef glyphRuns = CTLineGetGlyphRuns(line);
         CFIndex runIdx = 0;
@@ -264,7 +264,7 @@ CGPathRef textToPath(NSString *string, UIFont *font, NSTextAlignment align, CGSi
     textShadowLayer = [[CAShapeLayer alloc] init];
     textShadowLayer.opacity = 0.6;
     textShadowLayer.shouldRasterize = false;
-    const float shadow_alpha = 45.0 * M_PI / 180.0;
+    float shadow_alpha = (float) (45.0 * M_PI / 180.0);
     textShadowLayer.position = CGPointMake( cosf(shadow_alpha), sinf(shadow_alpha) );
     [textLayer insertSublayer:textShadowLayer atIndex:0];
     
@@ -314,18 +314,28 @@ CGPathRef textToPath(NSString *string, UIFont *font, NSTextAlignment align, CGSi
         finished= YES;
         
         CGSize maximumLabelSize = CGSizeMake(9999,9999);
-        
-        calculatedLabelSize = [text sizeWithFont:workingFont
-                             constrainedToSize:maximumLabelSize
-                                 lineBreakMode:NSLineBreakByWordWrapping];
-        
+
+        if(IOS7) {
+            NSStringDrawingContext *ctx = [[NSStringDrawingContext alloc] init];
+            ctx.minimumScaleFactor = 0.1;
+            NSDictionary *attrs = @{
+                    NSFontAttributeName: workingFont
+            };
+            CGRect bounds = [text boundingRectWithSize:maximumLabelSize options:NSStringDrawingUsesLineFragmentOrigin attributes:attrs context:ctx];
+            calculatedLabelSize = bounds.size;
+        } else {
+            calculatedLabelSize = [text sizeWithFont:workingFont
+                                   constrainedToSize:maximumLabelSize
+                                       lineBreakMode:NSLineBreakByWordWrapping];
+        }
+
         if( (calculatedLabelSize.width > MAX_WIDTH) && (workingFontSize>TEXT_SIZE_MIN) ) {
             workingFontSize -= 1;
             workingFont = [UIFont fontWithName:font.fontName size:workingFontSize];
             finished = NO;
         }
         
-    }while(finished==NO);
+    }while(!finished);
     
     if(workingFont!=font) {
         textView.font = workingFont;
@@ -392,78 +402,39 @@ CGPathRef textToPath(NSString *string, UIFont *font, NSTextAlignment align, CGSi
        
         textLayerIsDirty = NO;
     }
-    
-//    return;
-    
-    if(NO==self.editting)
+
+    if(!self.editting)
     {
-        
+        [self drawTextInContext:ctx];
+    }
+}
+
+-(void) drawTextInContext:(CGContextRef) ctx
+{
+
 //        CGContextScaleCTM(ctx, 1, -1);
 //        CGContextTranslateCTM(ctx, 0, -textView.bounds.size.height);
-        
-        CGContextSaveGState(ctx);
-        CGRect drawRect = self.bounds;
-        
-        CGContextSetRGBFillColor(ctx, 1.0, 1.0, 1.0, 0.4);
-        CGContextAddRect(ctx, drawRect);
-        CGContextFillPath(ctx);
-        
-        drawRect = CGRectInset(drawRect, 8*self.totalScale, 8*self.totalScale);
-        
-        CGContextSetRGBFillColor(ctx, 1.0, 1.0, 1.0, 0.4);
-        CGContextAddRect(ctx, drawRect);
-        CGContextFillPath(ctx);
+/*
 
-        CGContextSetRGBFillColor(ctx, 0.0, 1.0, 0.0, 0.2);
-        CGContextAddRect(ctx, CGRectMake(0, 0, self.bounds.size.width, self.bounds.size.height));
-        CGContextFillPath(ctx);
+    CGContextSaveGState(ctx);
+    CGRect drawRect = self.bounds;
 
-        CGContextRestoreGState(ctx);
-      
-        
-        
-/*        return;
-        CGContextSetRGBFillColor(ctx, 1.0, 1.0, 0.0, 1.0);
-      
-        CGContextScaleCTM(ctx, self.totalScale, self.totalScale);
+    CGContextSetRGBFillColor(ctx, 1.0, 1.0, 1.0, 0.4);
+    CGContextAddRect(ctx, drawRect);
+    CGContextFillPath(ctx);
 
-        CGRect pathRect = CGPathGetBoundingBox(textPath);
-        
-//        CGContextScaleCTM(ctx, 1, -1);
-//        CGContextTranslateCTM(ctx, 0, -pathRect.size.height);
-        [textLayer renderInContext:ctx];
-        [textLayer drawInContext:ctx];
+    drawRect = CGRectInset(drawRect, 8*self.totalScale, 8*self.totalScale);
 
-        CGContextSetTextPosition(ctx, 0, 0);
-        
-        // draw text path
-        CGContextSaveGState(ctx);
-        
-        CGSize offset = CGSizeMake(2, 2);
-        CGContextSetShadowWithColor(ctx, offset, 0, [[UIColor blueColor] CGColor]);
+    CGContextSetRGBFillColor(ctx, 1.0, 1.0, 1.0, 0.4);
+    CGContextAddRect(ctx, drawRect);
+    CGContextFillPath(ctx);
 
+    CGContextSetRGBFillColor(ctx, 0.0, 1.0, 0.0, 0.2);
+    CGContextAddRect(ctx, CGRectMake(0, 0, self.bounds.size.width, self.bounds.size.height));
+    CGContextFillPath(ctx);
 
-//        CGRect pathRect = CGPathGetBoundingBox(textPath);
-
-//        CGContextScaleCTM(ctx, 1, -1);
-//        CGContextTranslateCTM(ctx, 0, -pathRect.size.height);
-        
-        CGContextTranslateCTM(ctx, 8, -8 );
-        
-        CGContextAddPath(ctx, textPath);
-        
-        CGContextFillPath(ctx);
-        
-        CGContextRestoreGState(ctx);
-       
-
-        // if there's a shadow, let's set that up
-//        CGSize offset = CGSizeMake(2, 2);
-//        CGContextSetShadowWithColor(ctx, offset, 4, [[UIColor blueColor] CGColor]);
-        
-//        [textView.text drawInRect:drawRect withFont:self.font lineBreakMode:NSLineBreakByClipping alignment:NSTextAlignmentLeft];
+    CGContextRestoreGState(ctx);
 */
-    }
 }
 
 

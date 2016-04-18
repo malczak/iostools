@@ -17,7 +17,7 @@ typedef void (^RequestProductsCompletionHandler)(BOOL success, NSArray * product
 
 @property (nonatomic, readonly) BOOL productsListIsValid;
 
-- (id)initWithProductIdentifiers:(NSSet *)productIdentifiers;
+- (id)initWithProductIdentifiers:(NSArray *)productIdentifiers;
 - (BOOL)canMakePayments;
 - (BOOL)hasAnyProductsAvailable;
 - (BOOL)mainProductPurchased;

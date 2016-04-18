@@ -89,6 +89,9 @@ NSString *const IAPHelperProductPurchaseErrorNotification = @"IAPHelperProductPu
     
     // 1
     _completionHandler = [completionHandler copy];
+    if(!_completionHandler) {
+        return ;
+    }
     
     // 2
     _productsRequest = [[SKProductsRequest alloc] initWithProductIdentifiers:[NSSet setWithArray:_productIdentifiers]];
@@ -114,7 +117,10 @@ NSString *const IAPHelperProductPurchaseErrorNotification = @"IAPHelperProductPu
     NSLog(@"Buying %@...", product.productIdentifier);
 #endif
     SKPayment * payment = [SKPayment paymentWithProduct:product];
-    [[SKPaymentQueue defaultQueue] addPayment:payment];
+    if(payment != nil)
+    {
+        [[SKPaymentQueue defaultQueue] addPayment:payment];
+    }
 }
 
 - (SKProduct*)productByProductIdentifier:(NSString *)productIdentifier
@@ -156,23 +162,29 @@ NSString *const IAPHelperProductPurchaseErrorNotification = @"IAPHelperProductPu
     [skProducts sortedArrayUsingComparator:^NSComparisonResult(id obj1, id obj2) {
         SKProduct *product1 = (SKProduct*)obj1;
         SKProduct *product2 = (SKProduct*)obj2;
-        int index1 = [_productIdentifiers indexOfObject:product1.productIdentifier];
+        
+        NSUInteger index1 = [_productIdentifiers indexOfObject:product1.productIdentifier];
         if(index1==NSNotFound) {
             return NSOrderedSame;
         }
-        int index2 = [_productIdentifiers indexOfObject:product2.productIdentifier];
+
+        NSUInteger index2 = [_productIdentifiers indexOfObject:product2.productIdentifier];
         if(index2==NSNotFound) {
             return NSOrderedSame;
         }
+        
         if(index1<index2) {
             return NSOrderedAscending;
         }
+        
         return NSOrderedDescending;
     }]:nil;
     
     _availableProducts = sortedProducts;
-    
-    _completionHandler(YES, _availableProducts);
+
+    if (_completionHandler) {
+        _completionHandler(YES, _availableProducts);
+    }
     _completionHandler = nil;
 }
 
@@ -182,8 +194,10 @@ NSString *const IAPHelperProductPurchaseErrorNotification = @"IAPHelperProductPu
 #endif
     _productsListIsValid = YES;
     _productsRequest = nil;
-    
-    _completionHandler(NO, nil);
+
+    if (_completionHandler) {
+        _completionHandler(NO, nil);
+    }
     _completionHandler = nil;
     
 }

@@ -61,4 +61,6 @@ CGPathRef textToPath(NSString *string, UIFont *font, NSTextAlignment align, CGSi
 -(NSTextAlignment) textAlignment;
 -(void) setTextAlignment:(NSTextAlignment)value;
 
+-(void) drawTextInContext:(CGContextRef) ctx;
+
 @end

@@ -82,11 +82,12 @@ static const float TEXTVIEW_PADDING = 8;
         textView.layer.shadowRadius = 2;
         
         textView.textColor = [UIColor whiteColor];
+        textView.autoresizingMask = UIViewAutoresizingNone;
         textView.autocapitalizationType = UITextAutocapitalizationTypeNone;
         textView.autocorrectionType = UITextAutocorrectionTypeNo;
         textView.delegate = self;
         textView.clipsToBounds = YES;
-        textView.scrollEnabled = YES;
+        textView.scrollEnabled = NO;
         textView.editable = YES;
         textView.hidden = NO;
         textView.userInteractionEnabled = NO;
@@ -157,9 +158,19 @@ static const float TEXTVIEW_PADDING = 8;
         
         CGSize maximumLabelSize = CGSizeMake(9999,9999);
         
-        calculatedLabelSize = [text sizeWithFont:workingFont
-                               constrainedToSize:maximumLabelSize
-                                   lineBreakMode:NSLineBreakByWordWrapping];
+        if(IOS7) {
+            NSStringDrawingContext *ctx = [[NSStringDrawingContext alloc] init];
+            ctx.minimumScaleFactor = 0.1;
+            NSDictionary *attrs = @{
+                                    NSFontAttributeName: workingFont
+                                    };
+            CGRect bounds = [text boundingRectWithSize:maximumLabelSize options:NSStringDrawingUsesLineFragmentOrigin attributes:attrs context:ctx];
+            calculatedLabelSize = bounds.size;
+        } else {
+            calculatedLabelSize = [text sizeWithFont:workingFont
+                                   constrainedToSize:maximumLabelSize
+                                       lineBreakMode:NSLineBreakByWordWrapping];            
+        }
         
         if( (calculatedLabelSize.width > MAX_WIDTH) && (workingFontSize>self.minFontSize) ) {
             workingFontSize -= 1;
@@ -196,6 +207,7 @@ static const float TEXTVIEW_PADDING = 8;
     CGRect finalRect =  (CGRect){ {0,0}, finalSize };
     
     background.frame = finalRect;
+    textView.bounds = finalRect;
     textView.frame = finalRect;
     
     self.bounds = finalRect;    
